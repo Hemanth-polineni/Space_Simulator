@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ORBITAL TRACKER — Mission Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- ── Header bar ─────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">
+        <div class="logo-icon">◈</div>
+        <div>
+          <div class="logo-title">ORBITAL TRACKER</div>
+          <div class="logo-sub">MISSION CONTROL SYSTEM</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-center">
+      <div class="mission-stat">
+        <div class="mission-stat__label">MISSION TIME</div>
+        <div class="mission-stat__value" id="elapsed-time">00h 00m 00s</div>
+      </div>
+      <div class="mission-stat">
+        <div class="mission-stat__label">FRAME</div>
+        <div class="mission-stat__value" id="frame-count">0</div>
+      </div>
+      <div class="mission-stat">
+        <div class="mission-stat__label">ALERTS</div>
+        <div class="mission-stat__value" id="alert-total" style="color: var(--clr-ok)">0</div>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="conn-pill" id="conn-pill">
+        <span class="conn-dot" id="conn-dot"></span>
+        <span id="conn-label">CONNECTING</span>
+      </div>
+      <button class="hdr-btn" id="btn-pause" onclick="appTogglePause()">⏸ PAUSE</button>
+      <button class="hdr-btn hdr-btn--warn" onclick="appReset()">↺ RESET</button>
+    </div>
+  </header>
+
+  <!-- ── Main layout ────────────────────────────────────────────── -->
+  <main class="layout">
+
+    <!-- 3D canvas area -->
+    <section class="canvas-wrap" id="canvas-wrap">
+      <div class="canvas-badge top-left">
+        <span class="badge-dot"></span> LIVE ORBITAL VIEW
+      </div>
+      <div class="canvas-badge bottom-right" id="fps-display">— FPS</div>
+      <!-- Three.js mounts here -->
+    </section>
+
+    <!-- Telemetry sidebar -->
+    <aside class="sidebar">
+      <!-- Alert banner -->
+      <div class="alert-bar" id="alert-bar">
+        <span class="alert-bar__icon">◉</span>
+        <span class="alert-bar__text" id="alert-text">ALL SYSTEMS NOMINAL</span>
+      </div>
+
+      <!-- Object telemetry cards -->
+      <div class="telem-list" id="telem-list">
+        <div class="telem-loading">
+          <div class="spinner"></div>
+          <div>Awaiting signal...</div>
+        </div>
+      </div>
+
+      <!-- Sidebar footer -->
+      <footer class="sidebar-footer">
+        <div class="sf-row">
+          <span class="sf-label">INTEGRATOR</span>
+          <span class="sf-value">RK4</span>
+        </div>
+        <div class="sf-row">
+          <span class="sf-label">STEP SIZE</span>
+          <span class="sf-value">10 s/frame</span>
+        </div>
+        <div class="sf-row">
+          <span class="sf-label">THRESHOLD</span>
+          <span class="sf-value">5 km</span>
+        </div>
+        <div class="sf-row">
+          <span class="sf-label">OBJECTS</span>
+          <span class="sf-value" id="sf-obj-count">—</span>
+        </div>
+      </footer>
+    </aside>
+
+  </main>
+
+  <!-- ── Scripts ────────────────────────────────────────────────── -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="/static/js/scene.js"></script>
+  <script src="/static/js/dashboard.js"></script>
+  <script src="/static/js/main.js"></script>
+
+</body>
+</html>

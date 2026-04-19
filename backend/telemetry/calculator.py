@@ -7,7 +7,7 @@ All formulas come from classical orbital mechanics (Keplerian orbits).
 Each method explains the formula it uses.
 """
 import numpy as np
-from physics.constants import MU, EARTH_RADIUS
+from backend.physics.constants import MU, EARTH_RADIUS
 
 
 class OrbitalCalculator:

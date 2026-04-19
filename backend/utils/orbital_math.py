@@ -5,7 +5,7 @@ These don't belong to any single module — they're general-purpose tools.
 """
 
 import numpy as np
-from physics.constants import MU, EARTH_RADIUS
+from backend.physics.constants import MU, EARTH_RADIUS
 
 
 def circular_velocity(altitude_m: float) -> float:

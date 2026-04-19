@@ -5,7 +5,7 @@ Isolated here so the physics logic is completely separate from everything else.
 """
 
 import numpy as np
-from physics.constants import MU
+from backend.physics.constants import MU
 
 
 def gravitational_acceleration(position: np.ndarray) -> np.ndarray:

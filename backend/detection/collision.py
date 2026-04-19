@@ -5,7 +5,7 @@ Checks all pairs of objects each time step and flags near-misses or impacts.
 """
 
 import numpy as np
-from physics.constants import COLLISION_THRESHOLD
+from backend.physics.constants import COLLISION_THRESHOLD
 
 
 def check_collisions(objects: list, threshold: float = COLLISION_THRESHOLD) -> list:
