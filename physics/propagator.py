@@ -6,8 +6,6 @@ Each call advances the simulation by exactly one time step — live.
 
 import numpy as np
 from physics.gravity import gravitational_acceleration
-
-
 def rk4_step(position: np.ndarray, velocity: np.ndarray, dt: float):
     """
     Advances a single object's state by one time step using Runge-Kutta 4.
@@ -21,7 +19,6 @@ def rk4_step(position: np.ndarray, velocity: np.ndarray, dt: float):
     -------
     (new_position, new_velocity) : tuple of np.ndarray
     """
-
     def derivatives(pos, vel):
         return vel, gravitational_acceleration(pos)
     k1_v, k1_a = derivatives(position, velocity)
