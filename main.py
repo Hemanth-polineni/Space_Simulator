@@ -1,4 +1,4 @@
-# backend/main.py
+
 """
 FastAPI Application
 ====================
@@ -23,7 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.simulation import SimulationEngine
 
 # ── Paths ──────────────────────────────────────────────────────────────
-FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+FRONTEND_DIR = Path(__file__).parent / "frontend"
 
 # ── App ────────────────────────────────────────────────────────────────
 app    = FastAPI(title="Orbital Tracker")
