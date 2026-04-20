@@ -2,20 +2,18 @@
 /**
  * Application entry point.
  *
- * Flow:
- *   1. Fetch /config  → get object list → initialize Scene + Dashboard
- *   2. Open WebSocket → receive state frames → update Scene + Dashboard
- *   3. Reconnect automatically on disconnect
- *   4. Wire pause / reset buttons
+ * The original FastAPI backend (WebSocket + /config, /pause, /reset) is
+ * not available on the static Netlify deployment, so the simulation is
+ * driven entirely in the browser via SimulationEngine (see simulation.js).
  */
 
-const WS_URL  = `ws://${location.host}/ws`;
-const API_URL = `http://${location.host}`;
-
-let scene, dashboard, ws;
+let scene, dashboard, engine;
+let simTimer    = null;
 let isPaused    = false;
 let frameCount  = 0;
 let lastFpsTime = performance.now();
+
+const SIM_INTERVAL_MS = 50;   // 20 fps — matches the old server cadence
 
 // ── FPS counter ──────────────────────────────────────────────────────
 function tickFps() {
@@ -38,110 +36,88 @@ function setConnStatus(state) {
   const pill  = document.getElementById('conn-pill');
 
   const styles = {
-    connecting: { cls: '',     text: 'CONNECTING',  color: '' },
-    live:       { cls: 'live', text: 'LIVE',         color: 'var(--clr-ok)' },
-    dead:       { cls: 'dead', text: 'OFFLINE',      color: 'var(--clr-danger)' },
+    connecting: { cls: '',     text: 'CONNECTING', color: '' },
+    live:       { cls: 'live', text: 'LIVE',       color: 'var(--clr-ok)' },
+    paused:     { cls: 'live', text: 'PAUSED',     color: 'var(--clr-warn)' },
+    dead:       { cls: 'dead', text: 'OFFLINE',    color: 'var(--clr-danger)' },
   };
   const s = styles[state] || styles.connecting;
 
-  dot.className   = 'conn-dot ' + s.cls;
+  dot.className     = 'conn-dot ' + s.cls;
   label.textContent = s.text;
   if (s.color) pill.style.color = s.color;
 }
 
-// ── WebSocket management ─────────────────────────────────────────────
-function connectWS() {
-  setConnStatus('connecting');
-  ws = new WebSocket(WS_URL);
+// ── Simulation tick ──────────────────────────────────────────────────
+function simTick() {
+  if (!engine) return;
+  engine.step();
+  const state = engine.getState();
 
-  ws.onopen = () => {
-    setConnStatus('live');
-    console.log('[WS] Connected');
-    // Send periodic ping to keep the connection alive
-    ws._pingTimer = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) ws.send('ping');
-    }, 20000);
-  };
+  if (dashboard && !dashboard._initialized) {
+    dashboard.init(state.objects);
+  }
 
-  ws.onmessage = (evt) => {
-    const state = JSON.parse(evt.data);
+  if (scene)     scene.updateSatellites(state.objects);
+  if (dashboard) dashboard.update(state);
 
-    // Initialize scene objects on first frame
-    if (dashboard && !dashboard._initialized) {
-      dashboard.init(state.objects);
-    }
-
-    // Update 3D scene
-    if (scene) scene.updateSatellites(state.objects);
-
-    // Update dashboard
-    if (dashboard) dashboard.update(state);
-
-    // FPS
-    tickFps();
-  };
-
-  ws.onclose = () => {
-    setConnStatus('dead');
-    clearInterval(ws._pingTimer);
-    console.log('[WS] Disconnected — retrying in 2s');
-    setTimeout(connectWS, 2000);    // Auto-reconnect
-  };
-
-  ws.onerror = (err) => {
-    console.error('[WS] Error:', err);
-    ws.close();
-  };
+  tickFps();
 }
 
 // ── Control functions (bound to HTML buttons) ────────────────────────
-async function appTogglePause() {
-  const res  = await fetch(`${API_URL}/pause`, { method: 'POST' });
-  const data = await res.json();
-  isPaused   = data.paused;
+function appTogglePause() {
+  if (!engine) return;
+  isPaused = engine.togglePause();
 
   const btn = document.getElementById('btn-pause');
   if (btn) btn.textContent = isPaused ? '▶ RESUME' : '⏸ PAUSE';
+
+  setConnStatus(isPaused ? 'paused' : 'live');
 }
 
-async function appReset() {
-  await fetch(`${API_URL}/reset`, { method: 'POST' });
-  // Clear trails by rebuilding scene satellites
+function appReset() {
+  if (!engine) return;
+  engine.reset();
+  isPaused = false;
+
+  const btn = document.getElementById('btn-pause');
+  if (btn) btn.textContent = '⏸ PAUSE';
+
+  // Clear existing trails
   if (scene) {
-    const cfg = await fetch(`${API_URL}/config`).then(r => r.json());
-    cfg.objects.forEach(o => {
-      const sat = scene.satellites[o.id];
-      if (sat) sat.trail._buffer = [];
+    Object.values(scene.satellites).forEach(sat => {
+      sat.trail._buffer = [];
+      sat.trail.geometry.setDrawRange(0, 0);
+      sat.trail.geometry.attributes.position.needsUpdate = true;
     });
   }
+
+  setConnStatus('live');
 }
 
 // ── App initialization ───────────────────────────────────────────────
-async function init() {
-  // 1. Fetch config to know the objects before any WS data arrives
-  let config;
-  try {
-    config = await fetch(`${API_URL}/config`).then(r => r.json());
-  } catch (e) {
-    console.error('Could not reach backend:', e);
-    setTimeout(init, 2000);
-    return;
-  }
+function init() {
+  setConnStatus('connecting');
 
-  // 2. Initialize Three.js scene
+  engine = new SimulationEngine(10);
+  const config = engine.getConfig();
+
+  // Initialize Three.js scene
   const canvasWrap = document.getElementById('canvas-wrap');
   scene = new OrbitalScene(canvasWrap);
-
-  // Add one satellite mesh per object (before WS data arrives)
   config.objects.forEach(o => scene.addSatellite(o.id, o.color));
 
-  // 3. Initialize telemetry dashboard
+  // Initialize telemetry dashboard
   const telemList = document.getElementById('telem-list');
   dashboard = new Dashboard(telemList);
 
-  // 4. Open WebSocket — state updates drive everything from here
-  connectWS();
+  // Kick off the simulation loop
+  setConnStatus('live');
+  simTimer = setInterval(simTick, SIM_INTERVAL_MS);
 }
 
-// Kick off once DOM is ready
+// Expose button handlers to the inline onclick attributes in index.html
+window.appTogglePause = appTogglePause;
+window.appReset       = appReset;
+
 window.addEventListener('DOMContentLoaded', init);
